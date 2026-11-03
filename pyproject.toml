@@ -24,3 +24,6 @@ where = ["src"]
 testpaths = ["tests"]
 markers = ["hil: requires physical test bench", "integration: requires external components"]
 addopts = "-ra --strict-markers"
+
+[tool.setuptools.package-data]
+embedded_hil = ["py.typed"]
