@@ -1,0 +1,5 @@
+# DESIGN EXAMPLE — calibration required for each camera position.
+vision:
+  mode: static
+  algorithm: hsv
+  roi: null

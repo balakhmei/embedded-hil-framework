@@ -1,0 +1,20 @@
+# DESIGN EXAMPLE — not parsed by M0.4 code.
+bench:
+  id: rpi5-bench-01
+host:
+  type: raspberry_pi
+hardware:
+  uart:
+    driver: pyserial
+    port: auto  # Future: resolve by USB identity and fail on ambiguity
+    baudrate: 115200
+  relay:
+    driver: usb_relay
+    channels: 4
+  camera:
+    driver: picamera2
+  sonar_emulator:
+    driver: pico_hcsr04
+    port: auto
+reporting:
+  evidence_dir: artifacts/evidence

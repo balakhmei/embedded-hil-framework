@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "embedded-hil-framework"
+version = "0.1.0"
+description = "Portable embedded hardware-in-the-loop testing framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Ihor Balakhmei"}]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=8,<10"]
+hil = ["pyserial>=3.5,<4", "PyYAML>=6,<7"]
+report = ["allure-pytest>=2.13,<3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["hil: requires physical test bench", "integration: requires external components"]
+addopts = "-ra --strict-markers"

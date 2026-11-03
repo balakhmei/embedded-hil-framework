@@ -1,0 +1,8 @@
+# DESIGN EXAMPLE — no real credentials.
+dut:
+  id: sentry_swm2
+  button_channels:
+    K1: 1
+    K2: 2
+    K3: 3
+    K4: 4
