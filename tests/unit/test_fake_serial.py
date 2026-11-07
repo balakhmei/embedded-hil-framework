@@ -27,3 +27,24 @@ def test_read_when_port_closed():
 
     with pytest.raises(RuntimeError, match="Serial port is closed"):
         serial.read(10)
+
+def test_close_without_open():
+    uart = FakeSerialAdapter()
+
+    assert uart.is_open is False
+
+    uart.close()
+
+    assert uart.is_open is False
+
+def test_close_is_idempotent():
+    uart = FakeSerialAdapter()
+
+    uart.open()
+    assert uart.is_open is True
+
+    uart.close()
+    assert uart.is_open is False
+
+    uart.close()
+    assert uart.is_open is False

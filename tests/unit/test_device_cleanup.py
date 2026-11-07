@@ -2,9 +2,11 @@
 import pytest
 
 from embedded_hil.core.frame import Frame
+from embedded_hil.core.device_manager import DeviceManager
 from embedded_hil.adapters.fake.camera import FakeCameraAdapter
 from embedded_hil.adapters.fake.relay import FakeRelayAdapter
-from embedded_hil.core.device_manager import DeviceManager
+from embedded_hil.adapters.fake.serial import FakeSerialAdapter
+
 
 from contextlib import ExitStack
 
@@ -269,3 +271,99 @@ def test_device_manager_multiple_cleanup_errors():
     assert len(group.exceptions) == 2
     assert str(group.exceptions[0]) == "Relay communication error"
     assert str(group.exceptions[1]) == "Camera close failed"
+
+def test_partial_device_initialization():
+    events = []
+
+    def open_uart():
+        events.append("UART opened")
+
+    def close_uart():
+        events.append("UART closed")
+
+    def initialize_relay():
+        events.append("Relay initialized")
+
+    def cleanup_relay():
+        events.append("Relay off")
+
+    def open_camera():
+        events.append("Camera open failed")
+        raise RuntimeError("Camera initialization failed")
+
+    with pytest.raises(
+        RuntimeError,
+        match="Camera initialization failed",
+    ):
+        with DeviceManager() as manager:
+            open_uart()
+            manager.register_cleanup(close_uart)
+
+            initialize_relay()
+            manager.register_cleanup(cleanup_relay)
+
+            open_camera()
+
+    assert events == [
+        "UART opened",
+        "Relay initialized",
+        "Camera open failed",
+        "Relay off",
+        "UART closed",
+    ]
+
+def test_partial_initialization_with_fake_adapters():
+    uart = FakeSerialAdapter()
+
+    frame = Frame(
+        data=b"",
+        timestamp=0.0,
+        width=1,
+        height=1,
+        encoding="RGB",
+    )
+    camera = FakeCameraAdapter(frame)
+
+    def open_camera_with_failure():
+        raise RuntimeError("Camera initialization failed")
+
+    with pytest.raises(
+        RuntimeError,
+        match="Camera initialization failed",
+    ):
+        with DeviceManager() as manager:
+            uart.open()
+            manager.register_cleanup(uart.close)
+
+            open_camera_with_failure()
+
+    assert uart.is_open is False
+    assert camera.is_open is False
+
+def test_partial_uart_initialization_failure():
+    uart = FakeSerialAdapter()
+    events = []
+
+    def open_uart_with_failure():
+        uart.open()
+        events.append("UART partially opened")
+        raise RuntimeError("UART initialization failed")
+
+    def cleanup_uart():
+        uart.close()
+        events.append("UART closed")
+
+    with pytest.raises(
+        RuntimeError,
+        match="UART initialization failed",
+    ):
+        with DeviceManager() as manager:
+            manager.register_cleanup(cleanup_uart)
+
+            open_uart_with_failure()
+
+    assert events == [
+        "UART partially opened",
+        "UART closed",
+    ]
+    assert uart.is_open is False
