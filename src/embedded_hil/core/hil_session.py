@@ -24,8 +24,13 @@ class HILSession:
         self.relay = relay
         self.camera = camera
         self._manager = DeviceManager()
+        self._used = False
 
     def __enter__(self) -> "HILSession":
+        if self._used:
+            raise RuntimeError("HILSession cannot be reused")
+
+        self._used = True
         self._manager.__enter__()
 
         try:
