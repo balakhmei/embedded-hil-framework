@@ -27,7 +27,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["hil: requires physical test bench", "integration: requires external components"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers -m 'not hil'"
 
 [tool.setuptools.package-data]
 embedded_hil = ["py.typed"]
