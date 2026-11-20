@@ -10,16 +10,20 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{name = "Ihor Balakhmei"}]
-dependencies = []
+dependencies = [
+    "PyYAML>=6,<7",
+]
 
 [project.optional-dependencies]
 test = [
     "pytest>=8,<10",
     "mypy",
     "types-pyserial",
+    "types-PyYAML",
     "pyserial>=3.5,<4",
 ]
-hil = ["pyserial>=3.5,<4", "PyYAML>=6,<7"]
+
+hil = ["PyYAML>=6,<7"]
 report = ["allure-pytest>=2.13,<3"]
 
 [tool.setuptools.packages.find]
