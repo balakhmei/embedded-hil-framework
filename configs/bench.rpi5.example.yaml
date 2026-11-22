@@ -10,6 +10,7 @@ hardware:
     baudrate: 115200
   relay:
     driver: usb_relay
+    port: auto  # Future: resolve by USB identity and fail on ambiguity
     channels: 4
   camera:
     driver: picamera2
