@@ -180,3 +180,16 @@ def test_create_relay_adapter_rejects_invalid_channels(
         match="LCUS-4 relay requires exactly 4 channels",
     ):
         create_relay_adapter(config)
+
+def test_create_uart_adapter_rejects_auto_port() -> None:
+    config = {
+        "driver": "pyserial",
+        "port": "auto",
+        "baudrate": 115200,
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="Automatic UART port discovery is not implemented",
+    ):
+        create_uart_adapter(config)

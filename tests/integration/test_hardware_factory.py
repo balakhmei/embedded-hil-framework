@@ -11,16 +11,20 @@ from embedded_hil.config.factory import create_hardware_adapters
 from embedded_hil.config.loader import load_yaml_config
 
 
+
 def test_create_uart_adapter_from_yaml() -> None:
     config_path = Path("configs/bench.rpi5.example.yaml")
 
     config = load_yaml_config(config_path)
-    uart_config = config["hardware"]["uart"]
+    uart_config = config["hardware"]["uart"].copy()
+
+    # Explicit port until USB discovery is implemented
+    uart_config["port"] = "/dev/serial/by-id/test-uart"
 
     adapter = create_uart_adapter(uart_config)
 
     assert isinstance(adapter, RealSerialAdapter)
-    assert adapter.port == "auto"
+    assert adapter.port == "/dev/serial/by-id/test-uart"
     assert adapter.baudrate == 115200
     assert adapter._serial is None
 
@@ -117,3 +121,17 @@ def test_create_hardware_adapters_rejects_invalid_uart_config() -> None:
         match="Unsupported UART driver: unsupported_uart",
     ):
         create_hardware_adapters(hardware_config)
+
+def test_create_uart_adapter_from_yaml_requires_port_discovery() -> None:
+    config_path = Path("configs/bench.rpi5.example.yaml")
+
+    config = load_yaml_config(config_path)
+    uart_config = config["hardware"]["uart"]
+
+    assert uart_config["port"] == "auto"
+
+    with pytest.raises(
+        ValueError,
+        match="Automatic UART port discovery is not implemented",
+    ):
+        create_uart_adapter(uart_config)

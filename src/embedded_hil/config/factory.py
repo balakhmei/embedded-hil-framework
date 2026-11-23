@@ -5,19 +5,25 @@ from embedded_hil.adapters.real.serial import RealSerialAdapter
 from embedded_hil.adapters.real.relay import RealRelayAdapter
 
 
-def create_uart_adapter(
-    config: dict[str, Any],
-) -> RealSerialAdapter:
+def create_uart_adapter(config: dict[str, Any]) -> RealSerialAdapter:
     driver = config.get("driver")
 
     if driver == "pyserial":
+        port = config["port"]
+
+        if port == "auto":
+            raise ValueError(
+                "Automatic UART port discovery is not implemented"
+            )
+
         return RealSerialAdapter(
-            port=config["port"],
+            port=port,
             baudrate=config["baudrate"],
             timeout=config.get("timeout", 1.0),
         )
 
     raise ValueError(f"Unsupported UART driver: {driver}")
+
 
 def create_relay_adapter(config: dict[str, Any]) -> RealRelayAdapter:
     """Create a relay adapter from hardware configuration."""
