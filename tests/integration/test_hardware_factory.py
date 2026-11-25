@@ -3,6 +3,8 @@ import pytest
 
 from pathlib import Path
 
+from unittest.mock import patch
+
 from embedded_hil.adapters.real.serial import RealSerialAdapter
 from embedded_hil.adapters.real.relay import RealRelayAdapter
 from embedded_hil.config.factory import create_uart_adapter
@@ -122,16 +124,104 @@ def test_create_hardware_adapters_rejects_invalid_uart_config() -> None:
     ):
         create_hardware_adapters(hardware_config)
 
-def test_create_uart_adapter_from_yaml_requires_port_discovery() -> None:
+def test_create_uart_adapter_from_yaml_auto_discovers_port() -> None:
     config_path = Path("configs/bench.rpi5.example.yaml")
 
     config = load_yaml_config(config_path)
     uart_config = config["hardware"]["uart"]
 
     assert uart_config["port"] == "auto"
+    assert uart_config["vid"] == 0x0403
+    assert uart_config["pid"] == 0x6001
 
-    with pytest.raises(
-        ValueError,
-        match="Automatic UART port discovery is not implemented",
-    ):
-        create_uart_adapter(uart_config)
+    with patch(
+        "embedded_hil.discovery.serial.find_serial_port",
+        return_value="/dev/cu.usbserial-FT232R",
+    ) as mock_discovery:
+        adapter = create_uart_adapter(uart_config)
+
+    mock_discovery.assert_called_once_with(
+        vid=0x0403,
+        pid=0x6001,
+    )
+
+    assert isinstance(adapter, RealSerialAdapter)
+    assert adapter.port == "/dev/cu.usbserial-FT232R"
+    assert adapter.baudrate == 115200
+    assert adapter._serial is None
+
+def test_create_uart_adapter_auto_discovers_serial_port() -> None:
+    config = {
+        "driver": "pyserial",
+        "port": "auto",
+        "baudrate": 115200,
+        "vid": 0x0403,
+        "pid": 0x6001,
+    }
+
+    with patch(
+        "embedded_hil.discovery.serial.find_serial_port",
+        return_value="/dev/cu.usbserial-FT232R",
+    ) as mock_discovery:
+        adapter = create_uart_adapter(config)
+
+    mock_discovery.assert_called_once_with(
+        vid=0x0403,
+        pid=0x6001,
+    )
+
+    assert isinstance(adapter, RealSerialAdapter)
+    assert adapter.port == "/dev/cu.usbserial-FT232R"
+    assert adapter.baudrate == 115200
+    assert adapter._serial is None
+
+def test_create_uart_adapter_auto_discovers_by_serial_number() -> None:
+    config = {
+        "driver": "pyserial",
+        "port": "auto",
+        "baudrate": 115200,
+        "vid": 0x0403,
+        "pid": 0x6001,
+        "serial_number": "FT654321",
+    }
+
+    with patch(
+        "embedded_hil.discovery.serial.find_serial_port",
+        return_value="/dev/cu.usbserial-002",
+    ) as mock_discovery:
+        adapter = create_uart_adapter(config)
+
+    mock_discovery.assert_called_once_with(
+        vid=0x0403,
+        pid=0x6001,
+        serial_number="FT654321",
+    )
+
+    assert isinstance(adapter, RealSerialAdapter)
+    assert adapter.port == "/dev/cu.usbserial-002"
+    assert adapter.baudrate == 115200
+    assert adapter._serial is None
+
+def test_create_uart_adapter_rejects_missing_usb_device() -> None:
+    config = {
+        "driver": "pyserial",
+        "port": "auto",
+        "baudrate": 115200,
+        "vid": 0x0403,
+        "pid": 0x6001,
+    }
+
+    with patch(
+        "embedded_hil.discovery.serial.find_serial_port",
+        return_value=None,
+    ) as mock_discovery:
+        with pytest.raises(
+            ValueError,
+            match="UART device not found for configured VID/PID",
+        ):
+            create_uart_adapter(config)
+
+    mock_discovery.assert_called_once_with(
+        vid=0x0403,
+        pid=0x6001,
+    )

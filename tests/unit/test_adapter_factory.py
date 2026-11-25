@@ -181,7 +181,7 @@ def test_create_relay_adapter_rejects_invalid_channels(
     ):
         create_relay_adapter(config)
 
-def test_create_uart_adapter_rejects_auto_port() -> None:
+def test_create_uart_adapter_rejects_auto_without_vid_pid() -> None:
     config = {
         "driver": "pyserial",
         "port": "auto",
@@ -190,6 +190,69 @@ def test_create_uart_adapter_rejects_auto_port() -> None:
 
     with pytest.raises(
         ValueError,
-        match="Automatic UART port discovery is not implemented",
+        match="UART auto discovery requires VID and PID",
+    ):
+        create_uart_adapter(config)
+
+@pytest.mark.parametrize(
+    "serial_number",
+    [
+        123456,
+        None,
+        "",
+        "   ",
+        True,
+        [],
+        {},
+    ],
+)
+def test_create_uart_adapter_rejects_invalid_serial_number(
+    serial_number: object,
+) -> None:
+    config = {
+        "driver": "pyserial",
+        "port": "auto",
+        "baudrate": 115200,
+        "vid": 0x0403,
+        "pid": 0x6001,
+        "serial_number": serial_number,
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="UART serial_number must be a non-empty string",
+    ):
+        create_uart_adapter(config)
+
+@pytest.mark.parametrize(
+    ("field", "invalid_value"),
+    [
+        ("vid", -1),
+        ("vid", 0x10000),
+        ("vid", "0x0403"),
+        ("vid", True),
+        ("pid", -1),
+        ("pid", 0x10000),
+        ("pid", "0x6001"),
+        ("pid", None),
+    ],
+)
+def test_create_uart_adapter_rejects_invalid_usb_id(
+    field: str,
+    invalid_value: object,
+) -> None:
+    config = {
+        "driver": "pyserial",
+        "port": "auto",
+        "baudrate": 115200,
+        "vid": 0x0403,
+        "pid": 0x6001,
+    }
+
+    config[field] = invalid_value
+
+    with pytest.raises(
+        ValueError,
+        match="UART VID and PID must be 16-bit integers",
     ):
         create_uart_adapter(config)
