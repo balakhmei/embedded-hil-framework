@@ -86,7 +86,7 @@ def test_real_serial_adapter_close_failure() -> None:
         ):
             adapter.close()
 
-        assert adapter._serial is mock_serial.return_value
+        assert adapter._serial is None
 
 def test_real_serial_adapter_write() -> None:
     adapter = RealSerialAdapter(
@@ -356,3 +356,65 @@ def test_real_serial_adapter_write_empty_bytes() -> None:
         mock_serial.return_value.write.assert_called_once_with(
             b""
         )
+
+def test_real_serial_adapter_recovery_after_disconnect() -> None:
+    adapter = RealSerialAdapter(
+        port="/dev/cu.usbserial-test",
+    )
+
+    with patch(
+        "embedded_hil.adapters.real.serial.serial.Serial"
+    ) as mock_serial:
+        adapter.open()
+
+        # Simulate USB disconnection during write
+        mock_serial.return_value.write.side_effect = (
+            serial.SerialException("Device disconnected")
+        )
+
+        with pytest.raises(
+            serial.SerialException,
+            match="Device disconnected",
+        ):
+            adapter.write(b"STATUS\n")
+
+        # Close the old connection
+        adapter.close()
+        assert adapter._serial is None
+
+        # Simulate device reconnection
+        mock_serial.return_value.write.side_effect = None
+        mock_serial.return_value.write.return_value = 7
+
+        adapter.open()
+        adapter.write(b"STATUS\n")
+
+        assert mock_serial.call_count == 2
+        assert mock_serial.return_value.write.call_count == 2
+
+def test_real_serial_adapter_recovery_after_close_failure() -> None:
+    adapter = RealSerialAdapter(
+        port="/dev/cu.usbserial-test",
+    )
+
+    with patch(
+        "embedded_hil.adapters.real.serial.serial.Serial"
+    ) as mock_serial:
+        adapter.open()
+
+        mock_serial.return_value.close.side_effect = (
+            serial.SerialException("Device disconnected")
+        )
+
+        with pytest.raises(
+            serial.SerialException,
+            match="Device disconnected",
+        ):
+            adapter.close()
+
+        # A failed close must not block future recovery.
+        assert adapter._serial is None
+
+        adapter.open()
+
+        assert mock_serial.call_count == 2

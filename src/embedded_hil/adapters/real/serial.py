@@ -33,9 +33,10 @@ class RealSerialAdapter:
         if self._serial is None:
             return
 
-        self._serial.close()
-        self._serial = None
-
+        try:
+            self._serial.close()
+        finally:
+            self._serial = None
   
     def write(self, data: bytes) -> None:
         """Write bytes to the serial port."""
